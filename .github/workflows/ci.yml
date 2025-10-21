@@ -1,0 +1,30 @@
+name: CI - Build & Test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image
+        run: docker build -t drviki-app:${{ github.sha }} .
+
+      - name: Run container
+        run: |
+          docker run -d -p 8080:8080 --name drviki-test drviki-app:${{ github.sha }}
+          sleep 4
+          curl -f http://localhost:8080/ || (docker logs drviki-test && exit 1)
+
+      - name: Tear down
+        if: always()
+        run: docker rm -f drviki-test || true
+
